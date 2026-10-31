@@ -74,6 +74,7 @@ class ScreenshotTest {
         )
         compose.setContent { FlyradarTheme { RadarScreen(state, {}, {}, {}, {}, map = { FakeMap(it) }) } }
         // KVINNHERAD ligg fortøydd og blir ikkje vist
+        compose.onNodeWithText("Frodes Flyradar").assertExists()
         compose.onNodeWithText("3 fly  ·  2 båtar i fart", substring = true).assertExists()
         lagre("1-kart.png")
     }

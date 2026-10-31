@@ -23,8 +23,8 @@ android {
         minSdk = 26          // Android 8.0
         targetSdk = 35
         // Kvar ny versjon MÅ ha høgare versionCode, elles vil ikkje telefonen oppdatere.
-        versionCode = 4
-        versionName = "0.4"
+        versionCode = 5
+        versionName = "1.0"
     }
 
     signingConfigs {
@@ -60,6 +60,11 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+}
+
+// APK-fila får namn etter versjonen, t.d. Flyradar-1.0-release.apk
+base {
+    archivesName.set("Flyradar-${android.defaultConfig.versionName}")
 }
 
 dependencies {

@@ -95,7 +95,7 @@ fun RadarScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Flyradar") },
+                title = { Text("Frodes Flyradar") },
                 colors = greenTopBarColors(),
                 actions = {
                     SettingsMenu(state, onShowPlanes, onShowBoats, onShowMoored, onShowTrails, onRadius, onAbout = { showAbout = true })

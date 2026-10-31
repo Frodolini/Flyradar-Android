@@ -1,4 +1,4 @@
-# Flyradar for Android
+# Frodes Flyradar for Android
 
 Kart over fly og båtar rundt Stord, i sanntid. Ingen konto, ingen nøkkel og ingen reklame.
 
@@ -6,7 +6,7 @@ Kart over fly og båtar rundt Stord, i sanntid. Ingen konto, ingen nøkkel og in
 - **Båtar** frå Kystverket sin opne AIS-straum, oppdatert fortløpande
 - **Kart** frå OpenStreetMap
 
-## Funksjonar (versjon 0.4)
+## Funksjonar (versjon 1.0)
 
 - Fly farga etter høgd og rotert etter kurs
 - Båtar farga etter type (ferje, last, tank, fiske, service, fritid)
@@ -20,12 +20,12 @@ Kart over fly og båtar rundt Stord, i sanntid. Ingen konto, ingen nøkkel og in
 - Forklaring på fargane under ⓘ-knappen
 - **Om Flyradar** under tannhjulet (nytt i 0.4): versjon, lisens, datakjelder og bibliotek
 - Hentar data berre medan appen er open
-- Grøn tittellinje
+- Grøn tittellinje med «Frodes Flyradar»
 - Krev Android 8.0 eller nyare
 
 ## Installere
 
-1. Last ned `Flyradar-x.y.apk` frå [Releases](../../releases).
+1. Last ned `Flyradar-x.y-release.apk` frå [Releases](../../releases).
 2. Opne fila på telefonen og tillat installasjon frå denne kjelda når telefonen spør.
 
 ### Automatiske oppdateringar med Obtainium
@@ -39,7 +39,7 @@ Opne mappa i **Android Studio** og trykk ▶ Run. Eller frå kommandolinja:
 ```bash
 ./gradlew testDebugUnitTest   # køyr testane (og lag skjermbilete i app/build/skjermbilete/)
 ./gradlew assembleDebug       # byggjer app/build/outputs/apk/debug/app-debug.apk
-./gradlew assembleRelease     # signert versjon (krev keystore.properties, sjå under)
+./gradlew assembleRelease     # signert versjon: app/build/outputs/apk/release/Flyradar-x.y-release.apk
 ```
 
 Signert release-bygg krev fila `keystore.properties` i rotmappa (ligg **ikkje** i repoet):
@@ -51,7 +51,8 @@ keyAlias=...
 keyPassword=...
 ```
 
-Ved ny versjon: auk `versionCode` (og `versionName`) i `app/build.gradle.kts`.
+Ved ny versjon: auk `versionCode` (og `versionName`) i `app/build.gradle.kts`, byggj med
+`assembleRelease` og legg APK-fila ut som ein release med namnet «Flyradar Android x.y».
 
 ## Korleis prosjektet heng saman
 
@@ -85,6 +86,7 @@ Ved ny versjon: auk `versionCode` (og `versionName`) i `app/build.gradle.kts`.
 
 ## Versjonar
 
+- **1.0**: Første ferdige versjon, signert og lagt ut som release. Tittelen er «Frodes Flyradar»
 - **0.4**: «Om Flyradar» med versjon, lisens og kjelder; lisensen er GPL-3.0
 - **0.3**: Innstillingar under tannhjulet, båtar i ro skjulte som standard, tal i statuslinja
 - **0.2**: Flyrute, spor bak fly og båtar, forventa ankomst for båtar
