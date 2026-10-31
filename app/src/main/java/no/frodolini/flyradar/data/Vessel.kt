@@ -29,6 +29,8 @@ data class Vessel(
     val label: String get() = name?.takeIf { it.isNotBlank() } ?: "MMSI $mmsi"
     val category: VesselCategory get() = VesselCategory.of(shipType)
     val isMoving: Boolean get() = (speedKnots ?: 0.0) >= 0.5
+    /** Ligg i ro: fortøydd, ankra eller under 0,5 knop. */
+    val isAtRest: Boolean get() = !isMoving || navStatus == 1 || navStatus == 5
     /** Retninga ikonet skal peike: kurs når båten går, elles baugretning. */
     val direction: Double? get() = if (isMoving) course ?: heading?.toDouble() else heading?.toDouble()
 }

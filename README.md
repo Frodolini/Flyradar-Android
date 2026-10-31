@@ -6,15 +6,16 @@ Kart over fly og båtar rundt Stord, i sanntid. Ingen konto, ingen nøkkel og in
 - **Båtar** frå Kystverket sin opne AIS-straum, oppdatert fortløpande
 - **Kart** frå OpenStreetMap
 
-## Funksjonar (versjon 0.2)
+## Funksjonar (versjon 0.3)
 
 - Fly farga etter høgd og rotert etter kurs
-- Båtar farga etter type (ferje, last, tank, fiske, service, fritid). Båtar som ligg i ro blir viste som prikkar
-- Slå fly og båtar av og på kvar for seg
-- Vel radius: 25, 50, 100 eller 200 km
+- Båtar farga etter type (ferje, last, tank, fiske, service, fritid)
+- **Innstillingar under tannhjulet** (nytt i 0.3): vis fly, båtar, båtar i ro og spor, og vel radius (25, 50, 100 eller 200 km)
+- **Båtar i ro er skjulte** som standard (nytt i 0.3): fortøydde, ankra eller under 0,5 knop. Kan slåast på, og blir då viste som prikkar
+- Statuslinje med tal på fly og båtar, radius og når data sist vart oppdatert
 - Trykk på eit fly eller ein båt for detaljar: høgd, fart, kurs, type, destinasjon, MMSI/ICAO o.l.
 - **Flyrute** (nytt i 0.2): trykk på eit rutefly for å sjå kvar det kjem frå og skal, med linje på kartet og avstand att til målet. Ruta blir slått opp på kallesignalet hos [adsbdb.com](https://www.adsbdb.com)
-- **Spor** (nytt i 0.2): strek bak fly og båtar som viser kvar dei har vore dei siste 20 minutta (sidan appen vart opna). Kan slåast av i radius-menyen
+- **Spor** (nytt i 0.2): strek bak fly og båtar som viser kvar dei har vore dei siste 20 minutta (sidan appen vart opna). Kan slåast av under tannhjulet
 - **Forventa ankomst for båtar** (nytt i 0.2), frå AIS, vist i lokal tid
 - Forklaring på fargane under ⓘ-knappen
 - Hentar data berre medan appen er open
@@ -60,7 +61,7 @@ Ved ny versjon: auk `versionCode` (og `versionName`) i `app/build.gradle.kts`.
 | `AndroidManifest.xml` | «Visittkortet» til appen, med løyve til internett |
 | `MainActivity.kt` | Inngangen til appen; startar og stoppar datahentinga |
 | `ui/RadarViewModel.kt` | Held på tilstanden: fly, båtar, val og brytarar. Hentar data i bakgrunnen |
-| `ui/RadarScreen.kt` | Skjermbiletet: tittellinje, brytarar, status, infokort og forklaring |
+| `ui/RadarScreen.kt` | Skjermbiletet: tittellinje med innstillingar, statuslinje, infokort og forklaring |
 | `ui/RadarMap.kt` | Kartet (osmdroid) og markørane på det |
 | `ui/MapIcons.kt` | Teiknar fly- og båtikon i rett farge og retning |
 | `ui/theme/Theme.kt` | Fargar, lyst/mørkt tema og den grøne tittellinja |
@@ -82,6 +83,7 @@ Ved ny versjon: auk `versionCode` (og `versionName`) i `app/build.gradle.kts`.
 
 ## Versjonar
 
+- **0.3**: Innstillingar under tannhjulet, båtar i ro skjulte som standard, tal i statuslinja
 - **0.2**: Flyrute, spor bak fly og båtar, forventa ankomst for båtar
 - **0.1**: Første versjon: fly og båtar på kart
 

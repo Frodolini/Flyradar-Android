@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
                     onRadius = vm::setRadius,
                     onSelect = vm::select,
                     onShowTrails = vm::setShowTrails,
+                    onShowMoored = vm::setShowMoored,
                 )
             }
         }

@@ -54,6 +54,8 @@ data class RadarState(
     /** Spor bak fly og båtar, sjå TrailBook for nøklane. */
     val trails: Map<String, List<TrailPoint>> = emptyMap(),
     val showTrails: Boolean = true,
+    /** Båtar i ro er skjulte som standard. */
+    val showMoored: Boolean = false,
 )
 
 /**
@@ -115,6 +117,8 @@ class RadarViewModel : ViewModel() {
     }
 
     fun setShowTrails(on: Boolean) = _state.update { it.copy(showTrails = on) }
+
+    fun setShowMoored(on: Boolean) = _state.update { it.copy(showMoored = on) }
 
     /** Hentar ruta for eit kallesignal, berre éin gong (mislukka oppslag blir prøvde på nytt). */
     private fun lookupRoute(callsign: String) {

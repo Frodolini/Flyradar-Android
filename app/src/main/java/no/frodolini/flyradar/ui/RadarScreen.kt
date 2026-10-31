@@ -1,7 +1,6 @@
 package no.frodolini.flyradar.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,14 +20,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,9 +63,15 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** Båtar innanfor valt radius (straumen kan gje nokre litt utanfor). */
+/**
+ * Båtar som skal visast: innanfor valt radius (straumen kan gje nokre litt utanfor),
+ * og utan båtar i ro viss det er slått av. Ein vald båt blir alltid vist.
+ */
 fun RadarState.visibleVessels(): List<Vessel> =
-    vessels.filter { distanceKm(Stord.LAT, Stord.LON, it.lat, it.lon) <= radiusKm }
+    vessels.filter {
+        distanceKm(Stord.LAT, Stord.LON, it.lat, it.lon) <= radiusKm &&
+            (showMoored || !it.isAtRest || selection == Selection.Boat(it.mmsi))
+    }
 
 val RADIUS_VAL = listOf(25, 50, 100, 200)
 
@@ -78,6 +84,7 @@ fun RadarScreen(
     onRadius: (Int) -> Unit,
     onSelect: (Selection?) -> Unit,
     onShowTrails: (Boolean) -> Unit = {},
+    onShowMoored: (Boolean) -> Unit = {},
     // Kartet kan bytast ut i testar, der osmdroid ikkje kan køyre
     map: @Composable (Modifier) -> Unit = { m -> RadarMap(state, onSelect, m) },
 ) {
@@ -90,6 +97,7 @@ fun RadarScreen(
                 title = { Text("Flyradar") },
                 colors = greenTopBarColors(),
                 actions = {
+                    SettingsMenu(state, onShowPlanes, onShowBoats, onShowMoored, onShowTrails, onRadius)
                     IconButton(onClick = { showLegend = true }) {
                         Icon(Icons.Filled.Info, contentDescription = "Forklaring")
                     }
@@ -98,8 +106,7 @@ fun RadarScreen(
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            Controls(state, boats.size, onShowPlanes, onShowBoats, onRadius, onShowTrails)
-            StatusLine(state)
+            StatusLine(state, boats.size)
             Box(Modifier.fillMaxSize()) {
                 map(Modifier.fillMaxSize())
                 val sel = state.selection
@@ -127,50 +134,34 @@ fun RadarScreen(
     if (showLegend) LegendDialog(onDismiss = { showLegend = false })
 }
 
+/** Tannhjulet i tittellinja: kva som skal visast, og radius. */
 @Composable
-private fun Controls(
-    state: RadarState, boatCount: Int,
-    onShowPlanes: (Boolean) -> Unit, onShowBoats: (Boolean) -> Unit, onRadius: (Int) -> Unit,
-    onShowTrails: (Boolean) -> Unit,
+private fun SettingsMenu(
+    state: RadarState,
+    onShowPlanes: (Boolean) -> Unit, onShowBoats: (Boolean) -> Unit,
+    onShowMoored: (Boolean) -> Unit, onShowTrails: (Boolean) -> Unit, onRadius: (Int) -> Unit,
 ) {
-    var menu by remember { mutableStateOf(false) }
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        FilterChip(
-            selected = state.showPlanes,
-            onClick = { onShowPlanes(!state.showPlanes) },
-            label = { Text(if (state.showPlanes) "Fly (${state.aircraft.size})" else "Fly") },
-            leadingIcon = if (state.showPlanes) {
-                { Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
-            } else null,
-        )
-        FilterChip(
-            selected = state.showBoats,
-            onClick = { onShowBoats(!state.showBoats) },
-            label = { Text(if (state.showBoats) "Båtar ($boatCount)" else "Båtar") },
-            leadingIcon = if (state.showBoats) {
-                { Icon(Icons.Filled.Check, null, Modifier.size(FilterChipDefaults.IconSize)) }
-            } else null,
-        )
-        Spacer(Modifier.weight(1f))
-        Box {
-            TextButton(onClick = { menu = true }) { Text("${state.radiusKm} km ▾") }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                RADIUS_VAL.forEach { km ->
-                    DropdownMenuItem(
-                        text = { Text("Radius $km km") },
-                        onClick = { menu = false; onRadius(km) },
-                        trailingIcon = if (km == state.radiusKm) { { Icon(Icons.Filled.Check, null) } } else null,
-                    )
-                }
-                HorizontalDivider()
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(Icons.Filled.Settings, contentDescription = "Innstillingar")
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            MenuHeader("Vis på kartet")
+            // Brytarane lèt menyen stå open, så du kan endre fleire ting
+            ToggleItem("Fly", state.showPlanes) { onShowPlanes(it) }
+            ToggleItem("Båtar", state.showBoats) { onShowBoats(it) }
+            ToggleItem("Båtar i ro", state.showMoored, enabled = state.showBoats) { onShowMoored(it) }
+            ToggleItem("Spor bak alle", state.showTrails) { onShowTrails(it) }
+            HorizontalDivider()
+            MenuHeader("Radius frå Stord")
+            RADIUS_VAL.forEach { km ->
                 DropdownMenuItem(
-                    text = { Text("Vis spor bak alle") },
-                    onClick = { menu = false; onShowTrails(!state.showTrails) },
-                    trailingIcon = if (state.showTrails) { { Icon(Icons.Filled.Check, null) } } else null,
+                    text = { Text("$km km") },
+                    onClick = { open = false; onRadius(km) },
+                    leadingIcon = {
+                        RadioButton(selected = km == state.radiusKm, onClick = null)
+                    },
                 )
             }
         }
@@ -178,13 +169,34 @@ private fun Controls(
 }
 
 @Composable
-private fun StatusLine(state: RadarState) {
+private fun MenuHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+    )
+}
+
+@Composable
+private fun ToggleItem(text: String, checked: Boolean, enabled: Boolean = true, onChange: (Boolean) -> Unit) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        enabled = enabled,
+        onClick = { onChange(!checked) },
+        leadingIcon = { Checkbox(checked = checked, onCheckedChange = null, enabled = enabled) },
+    )
+}
+
+/** Kor mange fly og båtar som blir viste, og om datakjeldene svarar. */
+@Composable
+private fun StatusLine(state: RadarState, boatCount: Int) {
     val parts = buildList {
         if (state.showPlanes) {
             add(
                 when {
                     state.planeError != null -> "Fly: feil (${state.planeError})"
-                    state.planeUpdated != null -> "Fly ${klokke(state.planeUpdated)} · ${state.planeSource}"
+                    state.planeUpdated != null -> "${state.aircraft.size} fly"
                     else -> "Fly: hentar …"
                 }
             )
@@ -192,20 +204,24 @@ private fun StatusLine(state: RadarState) {
         if (state.showBoats) {
             add(
                 when (state.aisStatus) {
-                    AisStream.Status.CONNECTED -> "AIS: tilkopla"
-                    AisStream.Status.ERROR -> "AIS: feil (${state.aisError}), prøver igjen"
-                    else -> "AIS: koplar til …"
+                    AisStream.Status.CONNECTED -> "$boatCount båtar" + if (state.showMoored) "" else " i fart"
+                    AisStream.Status.ERROR -> "Båtar: feil (${state.aisError}), prøver igjen"
+                    else -> "Båtar: koplar til …"
                 }
             )
         }
+        add("${state.radiusKm} km")
+        state.planeUpdated?.let { add("oppdatert ${klokke(it).take(5)}") }
     }
-    Text(
-        parts.joinToString("   "),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
-    )
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Text(
+            parts.joinToString("  ·  "),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+        )
+    }
 }
 
 @Composable
@@ -312,7 +328,7 @@ private fun LegendDialog(onDismiss: () -> Unit) {
                 Text("Båtar (farge etter type)", fontWeight = FontWeight.Bold)
                 VesselCategory.entries.forEach { LegendRow(it.label, Color(Palette.vessel(it))) }
                 Spacer(Modifier.height(8.dp))
-                Text("Båtar som ligg i ro, blir viste som prikkar.", style = MaterialTheme.typography.bodySmall)
+                Text("Båtar som ligg i ro (fortøydde, ankra eller under 0,5 knop) er skjulte. Slå dei på med tannhjulet; då blir dei viste som prikkar.", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(12.dp))
                 Text("Spor og ruter", fontWeight = FontWeight.Bold)
                 Text(

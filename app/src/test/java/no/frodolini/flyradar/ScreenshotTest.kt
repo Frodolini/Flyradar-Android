@@ -73,8 +73,8 @@ class ScreenshotTest {
             planeUpdated = 1_793_430_000_000L, aisStatus = AisStream.Status.CONNECTED,
         )
         compose.setContent { FlyradarTheme { RadarScreen(state, {}, {}, {}, {}, map = { FakeMap(it) }) } }
-        compose.onNodeWithText("Fly (3)").assertExists()
-        compose.onNodeWithText("Båtar (3)").assertExists()
+        // KVINNHERAD ligg fortøydd og blir ikkje vist
+        compose.onNodeWithText("3 fly  ·  2 båtar i fart", substring = true).assertExists()
         lagre("1-kart.png")
     }
 
@@ -104,6 +104,25 @@ class ScreenshotTest {
         compose.onNodeWithText("Passasjer/ferje").assertExists()
         compose.onNodeWithText("Forventa fram").assertExists()
         lagre("3-baat.png")
+    }
+
+    @Test
+    fun innstillingar_i_tannhjulet() {
+        var moored: Boolean? = null
+        var radius: Int? = null
+        compose.setContent {
+            FlyradarTheme {
+                RadarScreen(RadarState(), {}, {}, { radius = it }, {}, onShowMoored = { moored = it }, map = { FakeMap(it) })
+            }
+        }
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Innstillingar")).performClick()
+        compose.onNodeWithText("Vis på kartet").assertExists()
+        compose.onNodeWithText("Båtar i ro").performClick()
+        compose.onNodeWithText("Spor bak alle").assertExists()        // menyen står framleis open
+        compose.onNodeWithText("50 km").performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals(true, moored)
+        org.junit.Assert.assertEquals(50, radius)
     }
 
     @Test
