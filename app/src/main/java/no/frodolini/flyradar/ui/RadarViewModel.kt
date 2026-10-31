@@ -15,7 +15,11 @@ import kotlinx.coroutines.withContext
 import no.frodolini.flyradar.ais.AisStream
 import no.frodolini.flyradar.data.Aircraft
 import no.frodolini.flyradar.data.AircraftClient
+import no.frodolini.flyradar.data.FlightRoute
+import no.frodolini.flyradar.data.RouteClient
 import no.frodolini.flyradar.data.Stord
+import no.frodolini.flyradar.data.TrailBook
+import no.frodolini.flyradar.data.TrailPoint
 import no.frodolini.flyradar.data.Vessel
 import no.frodolini.flyradar.data.VesselStore
 
@@ -23,6 +27,14 @@ import no.frodolini.flyradar.data.VesselStore
 sealed interface Selection {
     data class Plane(val hex: String) : Selection
     data class Boat(val mmsi: Int) : Selection
+}
+
+/** Oppslag av flyrute for eitt kallesignal. */
+sealed interface RouteLookup {
+    data object Loading : RouteLookup
+    data class Found(val route: FlightRoute) : RouteLookup
+    data object Unknown : RouteLookup
+    data object Failed : RouteLookup
 }
 
 data class RadarState(
@@ -37,6 +49,11 @@ data class RadarState(
     val aisStatus: AisStream.Status? = null,
     val aisError: String? = null,
     val selection: Selection? = null,
+    /** Flyruter, med kallesignal som nøkkel. */
+    val routes: Map<String, RouteLookup> = emptyMap(),
+    /** Spor bak fly og båtar, sjå TrailBook for nøklane. */
+    val trails: Map<String, List<TrailPoint>> = emptyMap(),
+    val showTrails: Boolean = true,
 )
 
 /**
@@ -51,6 +68,8 @@ class RadarViewModel : ViewModel() {
     private val planes = AircraftClient()
     private val ais = AisStream()
     private val store = VesselStore()
+    private val routeClient = RouteClient()
+    private val trailBook = TrailBook()
 
     private var planeJob: Job? = null
     private var aisJob: Job? = null
@@ -88,7 +107,48 @@ class RadarViewModel : ViewModel() {
         if (_state.value.showPlanes) { planeJob?.cancel(); planeJob = null; startPlanes() }
     }
 
-    fun select(sel: Selection?) = _state.update { it.copy(selection = sel) }
+    fun select(sel: Selection?) {
+        _state.update { it.copy(selection = sel) }
+        if (sel is Selection.Plane) {
+            _state.value.aircraft.find { it.hex == sel.hex }?.callsign?.let(::lookupRoute)
+        }
+    }
+
+    fun setShowTrails(on: Boolean) = _state.update { it.copy(showTrails = on) }
+
+    /** Hentar ruta for eit kallesignal, berre éin gong (mislukka oppslag blir prøvde på nytt). */
+    private fun lookupRoute(callsign: String) {
+        val prev = _state.value.routes[callsign]
+        if (prev != null && prev != RouteLookup.Failed) return
+        _state.update { it.copy(routes = it.routes + (callsign to RouteLookup.Loading)) }
+        viewModelScope.launch {
+            val result = try {
+                withContext(Dispatchers.IO) { routeClient.fetch(callsign) }
+                    ?.let { RouteLookup.Found(it) } ?: RouteLookup.Unknown
+            } catch (e: Exception) {
+                RouteLookup.Failed
+            }
+            _state.update { it.copy(routes = it.routes + (callsign to result)) }
+        }
+    }
+
+    /** Oppdaterer spora med siste posisjonar. Kalla etter kvar oppdatering. */
+    @Synchronized
+    private fun updateTrails(): Map<String, List<TrailPoint>> {
+        val st = _state.value
+        val now = System.currentTimeMillis()
+        val alive = HashSet<String>()
+        for (a in st.aircraft) {
+            val k = TrailBook.planeKey(a.hex); alive += k
+            trailBook.add(k, a.lat, a.lon, now, minMeters = 150.0)
+        }
+        for (v in st.vessels) {
+            val k = TrailBook.boatKey(v.mmsi); alive += k
+            trailBook.add(k, v.lat, v.lon, now, minMeters = 25.0)
+        }
+        trailBook.prune(now, alive)
+        return trailBook.snapshot()
+    }
 
     private fun startPlanes() {
         if (planeJob?.isActive == true) return
@@ -103,6 +163,7 @@ class RadarViewModel : ViewModel() {
                             planeError = null, planeUpdated = System.currentTimeMillis(),
                         )
                     }
+                    _state.update { it.copy(trails = updateTrails()) }
                 } catch (e: Exception) {
                     _state.update { it.copy(planeError = e.message ?: "Nettverksfeil") }
                 }
@@ -127,6 +188,7 @@ class RadarViewModel : ViewModel() {
                 while (isActive) {
                     val list = withContext(Dispatchers.Default) { store.snapshot() }
                     _state.update { it.copy(vessels = list) }
+                    _state.update { it.copy(trails = updateTrails()) }
                     delay(2000)
                 }
             }

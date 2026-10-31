@@ -47,7 +47,10 @@ class ScreenshotTest {
         Aircraft("478a11", null, "LN-OXA", "AS32", null, 1200, false, 120.0, 90.0, 0, null, 59.82, 5.40),
     )
     private val baatar = listOf(
-        Vessel(257001000, 59.77, 5.45, 12.5, 40.0, 41, 0, false, "STORD FERJA", "LFTX", 60, "HALHJEM", 110, 4.2, 0L),
+        Vessel(257001000, 59.77, 5.45, 12.5, 40.0, 41, 0, false, "STORD FERJA", "LFTX", 60, "HALHJEM", 110, 4.2, 0L,
+            no.frodolini.flyradar.ais.AisEta.of(
+                java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).monthValue,
+                java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).dayOfMonth, 23, 15)),
         Vessel(257002000, 59.86, 5.38, 0.0, null, 200, 5, false, "KVINNHERAD", null, 70, null, 90, null, 0L),
         Vessel(257003000, 59.73, 5.58, 7.0, 180.0, 179, 7, false, "HAVFISK", null, 30, null, 25, null, 0L),
     )
@@ -77,10 +80,19 @@ class ScreenshotTest {
 
     @Test
     fun infokort_for_fly_og_baat() {
-        val state = RadarState(aircraft = fly, vessels = baatar, selection = Selection.Plane("478f1d"))
+        val rute = no.frodolini.flyradar.data.FlightRoute(
+            "SAS928", "Scandinavian Airlines System",
+            no.frodolini.flyradar.data.Airport("BOS", "KBOS", "Boston", null, 42.36, -71.0),
+            no.frodolini.flyradar.data.Airport("CPH", "EKCH", "København", null, 55.62, 12.66),
+        )
+        val state = RadarState(
+            aircraft = fly, vessels = baatar, selection = Selection.Plane("478f1d"),
+            routes = mapOf("SAS928" to no.frodolini.flyradar.ui.RouteLookup.Found(rute)),
+        )
         compose.setContent { FlyradarTheme { RadarScreen(state, {}, {}, {}, {}, map = { FakeMap(it) }) } }
         compose.onNodeWithText("SAS928").assertExists()
         compose.onNodeWithText("38 000 ft (11 582 m)").assertExists()
+        compose.onNodeWithText("Boston (BOS) → København (CPH)").assertExists()
         lagre("2-fly.png")
     }
 
@@ -90,6 +102,7 @@ class ScreenshotTest {
         compose.setContent { FlyradarTheme { RadarScreen(state, {}, {}, {}, {}, map = { FakeMap(it) }) } }
         compose.onNodeWithText("STORD FERJA").assertExists()
         compose.onNodeWithText("Passasjer/ferje").assertExists()
+        compose.onNodeWithText("Forventa fram").assertExists()
         lagre("3-baat.png")
     }
 
@@ -117,6 +130,43 @@ class ScreenshotTest {
         }
         val dir = File("build/skjermbilete").apply { mkdirs() }
         File(dir, "5-ikon.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    /** Teiknar kartlaga (utan kartbitar) med spor og flyrute, for å sjå at linjene kjem rett. */
+    @Test
+    fun kartlag_med_spor_og_rute() {
+        val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        org.osmdroid.config.Configuration.getInstance().userAgentValue = "test"
+        val map = org.osmdroid.views.MapView(ctx)
+        map.setUseDataConnection(false)
+        val w = 1080; val h = 1400
+        map.measure(android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY),
+            android.view.View.MeasureSpec.makeMeasureSpec(h, android.view.View.MeasureSpec.EXACTLY))
+        map.layout(0, 0, w, h)
+        map.controller.setZoom(8.5)
+        map.controller.setCenter(org.osmdroid.util.GeoPoint(59.82, 5.45))
+        val pts = { lat0: Double, lon0: Double, dLat: Double, dLon: Double ->
+            (0 until 12).map { no.frodolini.flyradar.data.TrailPoint(lat0 + it * dLat, lon0 + it * dLon, it.toLong()) } }
+        val rute = no.frodolini.flyradar.data.FlightRoute("SAS928", null,
+            no.frodolini.flyradar.data.Airport("BOS", null, "Boston", null, 42.36, -71.0),
+            no.frodolini.flyradar.data.Airport("CPH", null, "København", null, 55.62, 12.66))
+        val state = RadarState(
+            aircraft = fly, vessels = baatar, selection = Selection.Plane("478f1d"),
+            routes = mapOf("SAS928" to no.frodolini.flyradar.ui.RouteLookup.Found(rute)),
+            trails = mapOf(
+                "p:478f1d" to pts(60.15, 5.55, -0.017, -0.021),
+                "p:4ac9e1" to pts(59.55, 5.78, 0.013, -0.015),
+                "b:257001000" to pts(59.73, 5.40, 0.0035, 0.0042),
+            ),
+        )
+        val layers = no.frodolini.flyradar.ui.MapLayers(map)
+        layers.sync(map, no.frodolini.flyradar.ui.MapIcons(ctx), state) {}
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        c.drawColor(0xFFAAD3DF.toInt())
+        map.overlays.forEach { it.draw(c, map.projection) }
+        val dir = File("build/skjermbilete").apply { mkdirs() }
+        File(dir, "6-kartlag.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
     private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onNodeWithContentDescriptionCompat(d: String) {

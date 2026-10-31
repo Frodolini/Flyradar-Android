@@ -1,6 +1,10 @@
 package no.frodolini.flyradar.data
 
+import no.frodolini.flyradar.ais.AisEta
 import no.frodolini.flyradar.ais.AisMessage
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 
 /** Ein båt, sett saman av posisjonsmeldingar og meldingar med namn og type. */
 data class Vessel(
@@ -20,6 +24,7 @@ data class Vessel(
     val draughtM: Double?,
     /** Tidspunkt (ms) for siste posisjon. */
     val updatedAt: Long,
+    val eta: AisEta? = null,
 ) {
     val label: String get() = name?.takeIf { it.isNotBlank() } ?: "MMSI $mmsi"
     val category: VesselCategory get() = VesselCategory.of(shipType)
@@ -52,6 +57,20 @@ enum class VesselCategory(val label: String) {
     }
 }
 
+/**
+ * Gjer ETA frå AIS (utan årstal, i UTC) om til eit tidspunkt. Me vel året som
+ * gjev tidspunktet nærast [now]. ETA meir enn 3 døgn tilbake i tid er truleg
+ * gammal og blir ikkje vist.
+ */
+fun etaInstant(eta: AisEta, now: Instant): Instant? {
+    val year = now.atZone(ZoneOffset.UTC).year
+    val candidates = (year - 1..year + 1).mapNotNull { y ->
+        runCatching { ZonedDateTime.of(y, eta.month, eta.day, eta.hour, eta.minute, 0, 0, ZoneOffset.UTC).toInstant() }.getOrNull()
+    }
+    val best = candidates.minByOrNull { kotlin.math.abs(it.epochSecond - now.epochSecond) } ?: return null
+    return if (best.isBefore(now.minusSeconds(3 * 24 * 3600))) null else best
+}
+
 /** Tekst for navigasjonsstatus i AIS. */
 fun navStatusText(status: Int): String? = when (status) {
     0 -> "Går for motor"
@@ -74,6 +93,7 @@ class VesselStore(private val now: () -> Long = System::currentTimeMillis) {
     private data class StaticInfo(
         val name: String? = null, val callsign: String? = null, val shipType: Int? = null,
         val destination: String? = null, val lengthM: Int? = null, val draughtM: Double? = null,
+        val eta: AisEta? = null,
     )
 
     private val positions = HashMap<Int, AisMessage.Position>()
@@ -96,6 +116,7 @@ class VesselStore(private val now: () -> Long = System::currentTimeMillis) {
                     destination = msg.destination?.ifBlank { null } ?: it.destination,
                     lengthM = msg.lengthM?.takeIf { l -> l > 0 } ?: it.lengthM,
                     draughtM = msg.draughtM?.takeIf { d -> d > 0 } ?: it.draughtM,
+                    eta = msg.eta ?: it.eta,
                 )
             }
             is AisMessage.ExtendedB -> {
@@ -140,7 +161,7 @@ class VesselStore(private val now: () -> Long = System::currentTimeMillis) {
                 course = p.course, heading = p.heading, navStatus = p.navStatus, classB = p.classB,
                 name = s.name, callsign = s.callsign, shipType = s.shipType,
                 destination = s.destination, lengthM = s.lengthM, draughtM = s.draughtM,
-                updatedAt = posTime[p.mmsi] ?: t,
+                updatedAt = posTime[p.mmsi] ?: t, eta = s.eta,
             )
         }
     }

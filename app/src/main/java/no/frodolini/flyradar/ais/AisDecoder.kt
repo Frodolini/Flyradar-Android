@@ -105,6 +105,7 @@ class AisDecoder {
                 destination = b.text(302, 20),
                 lengthM = b.uint(240, 9) + b.uint(249, 9),
                 draughtM = b.uint(294, 8) / 10.0,
+                eta = AisEta.of(b.uint(274, 4), b.uint(278, 5), b.uint(283, 5), b.uint(288, 6)),
             )
             24 -> when (b.uint(38, 2)) {
                 0 -> AisMessage.Static(mmsi = mmsi, name = b.text(40, 20))
@@ -208,10 +209,23 @@ sealed interface AisMessage {
         val destination: String? = null,
         val lengthM: Int? = null,
         val draughtM: Double? = null,
+        val eta: AisEta? = null,
     ) : AisMessage
 
     /** Klasse B-melding med både posisjon og namn (type 19). */
     data class ExtendedB(val position: Position, val name: String, val shipType: Int) : AisMessage {
         override val mmsi get() = position.mmsi
+    }
+}
+
+/**
+ * Forventa ankomsttid (ETA) slik ho står i AIS: månad, dag, time og minutt i UTC,
+ * utan årstal. Mannskapet legg ho inn sjølv.
+ */
+data class AisEta(val month: Int, val day: Int, val hour: Int, val minute: Int) {
+    companion object {
+        /** null når feltet ikkje er fylt ut (månad 0, time 24 eller minutt 60 betyr "ikkje tilgjengeleg"). */
+        fun of(month: Int, day: Int, hour: Int, minute: Int): AisEta? =
+            if (month in 1..12 && day in 1..31 && hour in 0..23 && minute in 0..59) AisEta(month, day, hour, minute) else null
     }
 }

@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
                     onShowBoats = vm::setShowBoats,
                     onRadius = vm::setRadius,
                     onSelect = vm::select,
+                    onShowTrails = vm::setShowTrails,
                 )
             }
         }

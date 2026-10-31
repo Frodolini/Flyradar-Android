@@ -29,6 +29,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +54,7 @@ import no.frodolini.flyradar.data.Stord
 import no.frodolini.flyradar.data.Vessel
 import no.frodolini.flyradar.data.VesselCategory
 import no.frodolini.flyradar.data.distanceKm
+import no.frodolini.flyradar.data.etaInstant
 import no.frodolini.flyradar.data.navStatusText
 import no.frodolini.flyradar.ui.theme.greenTopBarColors
 import java.text.SimpleDateFormat
@@ -75,6 +77,7 @@ fun RadarScreen(
     onShowBoats: (Boolean) -> Unit,
     onRadius: (Int) -> Unit,
     onSelect: (Selection?) -> Unit,
+    onShowTrails: (Boolean) -> Unit = {},
     // Kartet kan bytast ut i testar, der osmdroid ikkje kan køyre
     map: @Composable (Modifier) -> Unit = { m -> RadarMap(state, onSelect, m) },
 ) {
@@ -95,13 +98,13 @@ fun RadarScreen(
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            Controls(state, boats.size, onShowPlanes, onShowBoats, onRadius)
+            Controls(state, boats.size, onShowPlanes, onShowBoats, onRadius, onShowTrails)
             StatusLine(state)
             Box(Modifier.fillMaxSize()) {
                 map(Modifier.fillMaxSize())
                 val sel = state.selection
                 val card: (@Composable () -> Unit)? = when (sel) {
-                    is Selection.Plane -> state.aircraft.find { it.hex == sel.hex }?.let { a -> { PlaneCard(a) } }
+                    is Selection.Plane -> state.aircraft.find { it.hex == sel.hex }?.let { a -> { PlaneCard(a, a.callsign?.let { state.routes[it] }) } }
                     is Selection.Boat -> state.vessels.find { it.mmsi == sel.mmsi }?.let { v -> { BoatCard(v) } }
                     null -> null
                 }
@@ -128,6 +131,7 @@ fun RadarScreen(
 private fun Controls(
     state: RadarState, boatCount: Int,
     onShowPlanes: (Boolean) -> Unit, onShowBoats: (Boolean) -> Unit, onRadius: (Int) -> Unit,
+    onShowTrails: (Boolean) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     Row(
@@ -157,10 +161,17 @@ private fun Controls(
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 RADIUS_VAL.forEach { km ->
                     DropdownMenuItem(
-                        text = { Text("$km km") },
+                        text = { Text("Radius $km km") },
                         onClick = { menu = false; onRadius(km) },
+                        trailingIcon = if (km == state.radiusKm) { { Icon(Icons.Filled.Check, null) } } else null,
                     )
                 }
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text("Vis spor bak alle") },
+                    onClick = { menu = false; onShowTrails(!state.showTrails) },
+                    trailingIcon = if (state.showTrails) { { Icon(Icons.Filled.Check, null) } } else null,
+                )
             }
         }
     }
@@ -214,9 +225,23 @@ private fun InfoCard(onClose: () -> Unit, content: @Composable () -> Unit, modif
 }
 
 @Composable
-private fun PlaneCard(a: Aircraft) {
+private fun PlaneCard(a: Aircraft, route: RouteLookup?) {
     Title(a.label, Color(Palette.altitude(a)))
     Sub(listOfNotNull(a.type, a.description).joinToString(" · ").ifEmpty { "Ukjend flytype" })
+    Spacer(Modifier.height(6.dp))
+    when (route) {
+        is RouteLookup.Found -> {
+            Text(
+                "${route.route.origin.label} → ${route.route.destination.label}",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            route.route.airline?.let { Sub(it) }
+        }
+        RouteLookup.Loading -> Sub("Hentar rute …")
+        RouteLookup.Failed -> Sub("Fekk ikkje henta ruta")
+        RouteLookup.Unknown -> Sub("Ukjend rute")
+        null -> Sub(if (a.callsign == null) "Ingen rute (manglar kallesignal)" else "Ukjend rute")
+    }
     Spacer(Modifier.height(8.dp))
     Field("Høgd", if (a.onGround) "På bakken" else a.altitudeFt?.let { "${fmtInt(it)} ft (${fmtInt((it * 0.3048).roundToInt())} m)" })
     Field("Stig/søkk", a.verticalRate?.takeIf { abs(it) >= 64 }?.let { "${if (it > 0) "↑" else "↓"} ${fmtInt(abs(it))} ft/min" } ?: "Flatt")
@@ -226,6 +251,9 @@ private fun PlaneCard(a: Aircraft) {
     Field("ICAO", a.hex.uppercase())
     Field("Squawk", a.squawk)
     Field("Avstand", "${distanceKm(Stord.LAT, Stord.LON, a.lat, a.lon).roundToInt()} km frå Stord")
+    (route as? RouteLookup.Found)?.route?.destination?.let { d ->
+        Field("Att til mål", "${fmtInt(distanceKm(a.lat, a.lon, d.lat, d.lon).roundToInt())} km")
+    }
 }
 
 @Composable
@@ -237,6 +265,7 @@ private fun BoatCard(v: Vessel) {
     Field("Fart", v.speedKnots?.let { "${"%.1f".format(Locale.ROOT, it)} knop (${(it * 1.852).roundToInt()} km/t)" })
     Field("Kurs", v.course?.let { "${it.roundToInt()}°" })
     Field("Destinasjon", v.destination)
+    Field("Forventa fram", v.eta?.let { etaInstant(it, java.time.Instant.now()) }?.let(::fmtEta))
     Field("Lengd", v.lengthM?.let { "$it m" })
     Field("Djupgang", v.draughtM?.let { "${"%.1f".format(Locale.ROOT, it)} m" })
     Field("Kallesignal", v.callsign)
@@ -285,8 +314,17 @@ private fun LegendDialog(onDismiss: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Text("Båtar som ligg i ro, blir viste som prikkar.", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(12.dp))
+                Text("Spor og ruter", fontWeight = FontWeight.Bold)
                 Text(
-                    "Flydata: adsb.lol / adsb.fi (ADS-B).\nBåtdata: Kystverket, open AIS-straum (NLOD).\nKart: © OpenStreetMap-bidragsytarar.",
+                    "Streken bak eit fly eller ein båt viser kvar det har vore sidan appen vart opna (opp til 20 minutt). " +
+                        "Trykk på eit rutefly for å sjå heile ruta: heil strek frå avgangsflyplassen, stipla strek til målet. " +
+                        "Ruta blir slått opp på kallesignalet, så ekstraflygingar kan få feil rute.\n\n" +
+                        "For båtar er destinasjon og forventa ankomst lagt inn av mannskapet, og kan vere forkorta eller gamle.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Flydata: adsb.lol / adsb.fi (ADS-B). Ruter: adsbdb.com.\nBåtdata: Kystverket, open AIS-straum (NLOD).\nKart: © OpenStreetMap-bidragsytarar.",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -302,6 +340,12 @@ private fun LegendRow(text: String, color: Color) {
         Text(text)
     }
 }
+
+private val etaFormat = java.time.format.DateTimeFormatter
+    .ofPattern("EEE d. MMM 'kl.' HH:mm", Locale.forLanguageTag("nn-NO"))
+    .withZone(java.time.ZoneId.systemDefault())
+
+private fun fmtEta(t: java.time.Instant): String = etaFormat.format(t)
 
 private fun klokke(ms: Long): String = SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date(ms))
 private fun fmtInt(n: Int): String = "%,d".format(Locale.ROOT, n).replace(',', ' ')
