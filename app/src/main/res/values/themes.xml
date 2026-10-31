@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Grunntema for vindauget. Fargane i sjølve appen kjem frå Compose (ui/theme/Theme.kt). -->
+    <style name="Theme.Flyradar" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

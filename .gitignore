@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+.kotlin/
+
+# Signeringsnøkkel og passord skal ALDRI inn i repoet
+keystore.properties
+*.jks
+*.keystore
+/out/

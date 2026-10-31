@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ikon: radarsirklar med eit fly og ein båt. Teikna på 108x108, der dei
+     midtre 66x66 alltid er synlege. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Radarsirklar -->
+    <path
+        android:strokeColor="#A5D6A7"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M54,24 a30,30 0 1,0 0.01,0 Z" />
+    <path
+        android:strokeColor="#A5D6A7"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M54,39 a15,15 0 1,0 0.01,0 Z" />
+    <!-- Fly (øvst til høgre, peikar mot nordaust) -->
+    <group
+        android:pivotX="12"
+        android:pivotY="12"
+        android:rotation="45"
+        android:translateX="52"
+        android:translateY="26"
+        android:scaleX="1.1"
+        android:scaleY="1.1">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12 2c.7 0 1.2.6 1.2 1.4v6l7.8 4.6v2l-7.8-2.4v4.6l2.2 1.7v1.6L12 20.6l-3.4.9v-1.6l2.2-1.7v-4.6L3 16v-2l7.8-4.6v-6C10.8 2.6 11.3 2 12 2z" />
+    </group>
+    <!-- Båt (nede til venstre) -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M40,52 L45,59 L45,72 L35,72 L35,59 Z" />
+</vector>
