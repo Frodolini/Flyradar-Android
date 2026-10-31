@@ -6,7 +6,7 @@ Kart over fly og båtar rundt Stord, i sanntid. Ingen konto, ingen nøkkel og in
 - **Båtar** frå Kystverket sin opne AIS-straum, oppdatert fortløpande
 - **Kart** frå OpenStreetMap
 
-## Funksjonar (versjon 0.3)
+## Funksjonar (versjon 0.4)
 
 - Fly farga etter høgd og rotert etter kurs
 - Båtar farga etter type (ferje, last, tank, fiske, service, fritid)
@@ -18,6 +18,7 @@ Kart over fly og båtar rundt Stord, i sanntid. Ingen konto, ingen nøkkel og in
 - **Spor** (nytt i 0.2): strek bak fly og båtar som viser kvar dei har vore dei siste 20 minutta (sidan appen vart opna). Kan slåast av under tannhjulet
 - **Forventa ankomst for båtar** (nytt i 0.2), frå AIS, vist i lokal tid
 - Forklaring på fargane under ⓘ-knappen
+- **Om Flyradar** under tannhjulet (nytt i 0.4): versjon, lisens, datakjelder og bibliotek
 - Hentar data berre medan appen er open
 - Grøn tittellinje
 - Krev Android 8.0 eller nyare
@@ -63,6 +64,7 @@ Ved ny versjon: auk `versionCode` (og `versionName`) i `app/build.gradle.kts`.
 | `ui/RadarViewModel.kt` | Held på tilstanden: fly, båtar, val og brytarar. Hentar data i bakgrunnen |
 | `ui/RadarScreen.kt` | Skjermbiletet: tittellinje med innstillingar, statuslinje, infokort og forklaring |
 | `ui/RadarMap.kt` | Kartet (osmdroid) og markørane på det |
+| `ui/AboutDialog.kt` | «Om Flyradar»: versjon, lisens, datakjelder og bibliotek |
 | `ui/MapIcons.kt` | Teiknar fly- og båtikon i rett farge og retning |
 | `ui/theme/Theme.kt` | Fargar, lyst/mørkt tema og den grøne tittellinja |
 | `data/Aircraft.kt` | Les flydata (JSON) frå adsb.lol / adsb.fi |
@@ -83,8 +85,21 @@ Ved ny versjon: auk `versionCode` (og `versionName`) i `app/build.gradle.kts`.
 
 ## Versjonar
 
+- **0.4**: «Om Flyradar» med versjon, lisens og kjelder; lisensen er GPL-3.0
 - **0.3**: Innstillingar under tannhjulet, båtar i ro skjulte som standard, tal i statuslinja
 - **0.2**: Flyrute, spor bak fly og båtar, forventa ankomst for båtar
 - **0.1**: Første versjon: fly og båtar på kart
 
 Appen er skriven i **Kotlin** med **Jetpack Compose**.
+
+## Lisens
+
+© 2026 Frode Fjellanger
+
+Flyradar er fri programvare: du kan dele og endre han under vilkåra i
+[GNU General Public License, versjon 3](LICENSE). Det du deler vidare, må òg vere
+GPL-3.0 med open kjeldekode. Programmet kjem **utan nokon form for garanti**.
+
+Biblioteka appen brukar (osmdroid, Jetpack Compose/AndroidX og Kotlin) er under
+Apache License 2.0. Kartdata © OpenStreetMap-bidragsytarar (ODbL). AIS-data frå
+Kystverket under Norsk lisens for offentlege data (NLOD).

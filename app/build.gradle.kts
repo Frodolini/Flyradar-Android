@@ -23,8 +23,8 @@ android {
         minSdk = 26          // Android 8.0
         targetSdk = 35
         // Kvar ny versjon MÅ ha høgare versionCode, elles vil ikkje telefonen oppdatere.
-        versionCode = 3
-        versionName = "0.3"
+        versionCode = 4
+        versionName = "0.4"
     }
 
     signingConfigs {

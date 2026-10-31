@@ -89,6 +89,7 @@ fun RadarScreen(
     map: @Composable (Modifier) -> Unit = { m -> RadarMap(state, onSelect, m) },
 ) {
     var showLegend by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
     val boats = state.visibleVessels()
 
     Scaffold(
@@ -97,7 +98,7 @@ fun RadarScreen(
                 title = { Text("Flyradar") },
                 colors = greenTopBarColors(),
                 actions = {
-                    SettingsMenu(state, onShowPlanes, onShowBoats, onShowMoored, onShowTrails, onRadius)
+                    SettingsMenu(state, onShowPlanes, onShowBoats, onShowMoored, onShowTrails, onRadius, onAbout = { showAbout = true })
                     IconButton(onClick = { showLegend = true }) {
                         Icon(Icons.Filled.Info, contentDescription = "Forklaring")
                     }
@@ -132,6 +133,7 @@ fun RadarScreen(
     }
 
     if (showLegend) LegendDialog(onDismiss = { showLegend = false })
+    if (showAbout) AboutDialog(onDismiss = { showAbout = false })
 }
 
 /** Tannhjulet i tittellinja: kva som skal visast, og radius. */
@@ -140,6 +142,7 @@ private fun SettingsMenu(
     state: RadarState,
     onShowPlanes: (Boolean) -> Unit, onShowBoats: (Boolean) -> Unit,
     onShowMoored: (Boolean) -> Unit, onShowTrails: (Boolean) -> Unit, onRadius: (Int) -> Unit,
+    onAbout: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -164,6 +167,12 @@ private fun SettingsMenu(
                     },
                 )
             }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Om Flyradar") },
+                onClick = { open = false; onAbout() },
+                leadingIcon = { Icon(Icons.Filled.Info, null) },
+            )
         }
     }
 }
@@ -339,10 +348,7 @@ private fun LegendDialog(onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    "Flydata: adsb.lol / adsb.fi (ADS-B). Ruter: adsbdb.com.\nBåtdata: Kystverket, open AIS-straum (NLOD).\nKart: © OpenStreetMap-bidragsytarar.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Text("Kjelder, lisens og versjon står under tannhjulet → Om Flyradar.", style = MaterialTheme.typography.bodySmall)
             }
         },
     )

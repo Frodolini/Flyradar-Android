@@ -126,6 +126,17 @@ class ScreenshotTest {
     }
 
     @Test
+    fun om_flyradar() {
+        compose.setContent { FlyradarTheme { RadarScreen(RadarState(), {}, {}, {}, {}, map = { FakeMap(it) }) } }
+        compose.onNode(androidx.compose.ui.test.hasContentDescription("Innstillingar")).performClick()
+        compose.onNodeWithText("Om Flyradar").performClick()
+        compose.onNodeWithText("Laga av Frode Fjellanger").assertExists()
+        compose.onNodeWithText("Versjon", substring = true).assertExists()
+        compose.onNodeWithText("GNU General Public License", substring = true).assertExists()
+        lagre("7-om.png", dialog = true)
+    }
+
+    @Test
     fun forklaring() {
         compose.setContent { FlyradarTheme { RadarScreen(RadarState(), {}, {}, {}, {}, map = { FakeMap(it) }) } }
         compose.onNodeWithContentDescriptionCompat("Forklaring")
